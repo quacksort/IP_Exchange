@@ -31,6 +31,10 @@ SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
 
 
 def update_ip_files(device_type):
+    server_ip_downloaded = False
+    client_ip_uploaded = False
+    server_ip = None
+
     creds = None
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
@@ -72,43 +76,49 @@ def update_ip_files(device_type):
 
         client_file_name = "ip_client.txt"
         server_file_name = "ip_server.txt"
-        server_ip = None
         if device_type == DeviceType.SERVER:
             client_file_name, server_file_name = server_file_name, client_file_name
-
-        client_file = service.files().list(
-            q=f"'{folder_id}' in parents and name = '{client_file_name}'",
-            includeItemsFromAllDrives=True, supportsAllDrives=True, ).execute()
-        client_file_media = MediaFileUpload(client_file_name_local)
-        client_file_object = {'name': client_file_name, 'parents': [folder_id]}
-        if len(client_file.get('files', [])) != 0:
-            for f in client_file.get('files', []):
-                service.files().delete(fileId=f.get('id')).execute()
-        service.files().create(body=client_file_object, media_body=client_file_media).execute()
-
-        server_file = service.files().list(
-            q=f"'{folder_id}' in parents and name = '{server_file_name}'",
-            includeItemsFromAllDrives=True, supportsAllDrives=True, ).execute()
-        if len(server_file.get('files', [])) == 0:
-            print('No IP files found in directory')
-            raise FileNotFoundException(server_file_name)
-        request = service.files().get_media(fileId=server_file.get('files', [])[0].get('id'))
-        file = io.BytesIO()
-        downloader = MediaIoBaseDownload(file, request)
-        done = False
-        while done is False:
-            status, done = downloader.next_chunk()
-            print(F'Download {int(status.progress() * 100)}.')
-        with open(server_file_name_local, 'wb') as server_file_local:
-            server_file_local.write(file.getvalue())
-            server_ip = file.getvalue().decode("utf-8").strip()
-
-        return server_ip
+        try:
+            client_file = service.files().list(
+                q=f"'{folder_id}' in parents and name = '{client_file_name}'",
+                includeItemsFromAllDrives=True, supportsAllDrives=True, ).execute()
+            client_file_media = MediaFileUpload(client_file_name_local)
+            client_file_object = {'name': client_file_name, 'parents': [folder_id]}
+            if len(client_file.get('files', [])) != 0:
+                for f in client_file.get('files', []):
+                    service.files().delete(fileId=f.get('id')).execute()
+            service.files().create(body=client_file_object, media_body=client_file_media).execute()
+            client_ip_uploaded = True
+        except FileNotFoundException as error:
+            print(f'Not found on Google Drive: {error}')
+        except Exception as e:
+            print("Error while uploading your IP file to Google Drive")
+        try:
+            server_file = service.files().list(
+                q=f"'{folder_id}' in parents and name = '{server_file_name}'",
+                includeItemsFromAllDrives=True, supportsAllDrives=True, ).execute()
+            if len(server_file.get('files', [])) == 0:
+                print('No IP files found in directory')
+                raise FileNotFoundException(server_file_name)
+            request = service.files().get_media(fileId=server_file.get('files', [])[0].get('id'))
+            file = io.BytesIO()
+            downloader = MediaIoBaseDownload(file, request)
+            done = False
+            while done is False:
+                status, done = downloader.next_chunk()
+                print(F'Download {int(status.progress() * 100)}.')
+            with open(server_file_name_local, 'wb') as server_file_local:
+                server_file_local.write(file.getvalue())
+                server_ip = file.getvalue().decode("utf-8").strip()
+            server_ip_downloaded = True
+        except FileNotFoundException as error:
+            print(f'Not found on Google Drive: {error}')
+        except Exception as e:
+            print("Error while downloading other IP file from Google Drive")
     except HttpError as error:
-        # TODO(developer) - Handle errors from drive API.
-        print(f'An error occurred: {error}')
-    except FileNotFoundException as error:
-        print(f'Not found on Google Drive: {error}')
+        print(f'A Google API error occurred: {error}')
+    return server_ip_downloaded, client_ip_uploaded, server_ip
+
 
 
 if __name__ == '__main__':

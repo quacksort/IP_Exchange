@@ -38,20 +38,35 @@ def main(argv):
 
     server_ip_old = None
     server_ip = None
+
+    client_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+    print(f"My IP is {client_ip}")
+    with open(client_file_name_local, "w") as client_file:
+        client_file.write(client_ip + ":" + client_port)
+
     with open(server_file_name_local) as server_file_local:
         server_ip_old = server_file_local.read().strip()
-    server_ip = update_ip_files(device_type)
+
+    server_ip_downloaded, client_ip_uploaded, server_ip = update_ip_files(device_type)
+    print(f"Other IP is {server_ip}")
+    if client_ip_uploaded:
+        print(f"My IP has been uploaded successfully")
+    else:
+        print(f"My IP has NOT been uploaded")
+    if server_ip_downloaded:
+        print(f"Server IP has been downloaded successfully")
+    else:
+        print(f"Server IP has NOT been downloaded")
+    print(f"Other IP is {server_ip}")
+
     if server_ip is None:
         with open(server_file_name_local) as server_file_local:
             server_ip = server_file_local.read()
     if server_ip_old == server_ip:
-        print("Nothing to update")
+        print("Nothing to update in local wg config")
         return
     update_conf_file(server_ip)
-    client_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-    print(client_ip)
-    with open(client_file_name_local, "w") as client_file:
-        client_file.write(client_ip + ":" + client_port)
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
