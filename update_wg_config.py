@@ -38,15 +38,20 @@ def main(argv):
 
     server_ip_old = None
     server_ip = None
+    client_ip = None
 
-    client_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-    print(f"My IP is {client_ip}")
-    with open(client_file_name_local, "w") as client_file:
-        client_file.write(client_ip + ":" + client_port)
+    try:
+        client_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+    except Exception:
+        error_client_ip = True
+        print(f"Cannot retrieve my IP")
+    if client_ip is not None:
+        print(f"My IP is {client_ip}")
+        with open(client_file_name_local, "w") as client_file:
+            client_file.write(client_ip + ":" + client_port)
 
     with open(server_file_name_local) as server_file_local:
         server_ip_old = server_file_local.read().strip()
-
     server_ip_downloaded, client_ip_uploaded, server_ip = update_ip_files(device_type)
     print(f"Other IP is {server_ip}")
     if client_ip_uploaded:
