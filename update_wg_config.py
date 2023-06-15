@@ -1,3 +1,5 @@
+import os
+
 from commons import *
 import sys, getopt
 import urllib.request
@@ -70,8 +72,13 @@ def main(argv):
     if server_ip_old == server_ip:
         print("Nothing to update in local wg config")
         return
-    update_conf_file(server_ip)
-
+    if device_type == DeviceType.CLIENT:
+        update_conf_file(server_ip)
+    else:
+        if os.path.isfile(server_update_script_path):
+            os.system(server_update_script_path)
+        else:
+            print("Server script not found")
 
 if __name__ == '__main__':
     main(sys.argv[1:])

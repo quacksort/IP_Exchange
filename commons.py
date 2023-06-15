@@ -4,6 +4,7 @@ server_file_name_local = "other_ip.txt"
 
 wg_config_file_path = "/etc/wireguard/wg0.conf"
 
+server_update_script_path = "server_script.sh"
 class FileUpdateException(Exception):
     def __init__(self, e: Exception, m):
         super(e)
